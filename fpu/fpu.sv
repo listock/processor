@@ -18,7 +18,7 @@ module fpu
         input wire[bitness:0] second,
         input wire[bitness:0] z_in,
 
-        input wire[`COMMAND_SIZE:0] command,
+        input wire[command_size:0] command,
 
         output wire[bitness:0] result,
         output wire[bitness:0] z_out
