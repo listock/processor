@@ -17,16 +17,15 @@ module fpu
         input clock,
         input reset,
 
-        input wire[bitness - 1:0] first,
-        input wire[bitness - 1:0] second,
-        input wire[bitness - 1:0] z_in,
+        input [bitness - 1:0] first,
+        input [bitness - 1:0] second,
+        input [bitness - 1:0] z_in,
 
-        input wire[command_size - 1:0] command,
+        input [command_size - 1:0] command,
 
-        output reg[bitness - 1:0] result,
-        output reg[bitness - 1:0] z_out,
+        output [bitness - 1:0] result,
 
-        output reg work_is_done
+        output work_is_done
 
 );
         enum reg[3:0] { unpack    = 4'b0000
@@ -37,8 +36,10 @@ module fpu
                       , sub       = 4'b0101
                       , mul       = 4'b0110
                       , div       = 4'b1000
-                      , done      = 4'b1001} state;
+              } state;
 
+        reg [bitness - 1:0] result_internal;
+        reg work_is_done_internal;
 
         reg first_sign;
         reg second_sign;
@@ -70,27 +71,26 @@ module fpu
                         end
 
                         pack: begin
-                                result_sign <= first_sign;
-                                result_exp <= first_exp;
+                                result_sign     <= first_sign;
+                                result_exp      <= first_exp;
                                 result_mantissa <= first_mantissa;
 
                                 // Packing result, work is done
-                                result[bitness - 1]                             <= result_sign;
-                                result[bitness - 2: `MANT_BITNESS(bitness) - 1] <= result_exp;
-                                result[`MANT_BITNESS(bitness) - 1:0]            <= result_mantissa;
+                                result_internal[bitness - 1]                             = result_sign;
+                                result_internal[bitness - 2: `MANT_BITNESS(bitness) - 1] = result_exp;
+                                result_internal[`MANT_BITNESS(bitness) - 1:0]            = result_mantissa;
 
-                                work_is_done <= 1'b1;
+                                work_is_done_internal <= 1'b1;
                         end
                 endcase
 
                 if (reset == 1) begin
                         state <= unpack;
-                end
-
-                if (state == done) begin
-                        work_is_done <= 1'b1;
+                        work_is_done_internal <= 0;
                 end
         end
 
+        assign result = result_internal;
+        assign work_is_done = work_is_done_internal;
 
 endmodule
