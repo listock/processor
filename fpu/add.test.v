@@ -14,9 +14,10 @@ module add_tb();
 
         reg [31:0] left, right, z_in, z_out;
 
-        wire [31:0] result;
+        reg [31:0] result;
 
         reg [1:0] command;
+        reg done;
 
         fpu DUT (
                 .command(command),
@@ -26,6 +27,7 @@ module add_tb();
                 .second(right),
                 .z_in(z_in),
                 .z_out(z_out),
+                .work_is_done(done),
                 .result(result));
 
         initial begin
@@ -34,15 +36,20 @@ module add_tb();
                 //`TEST_MESSAGE(result === left, "summ 1")
                 #5
                 reset <= 1'b1;
+                clock <= 1'b0;
+                #5;
                 while(1) begin
-                        #5 clock <= ~clock;
+                        clock <= ~clock;
+                        #1;
                         reset <= 1'b0;
-                        $display("%b %b %b", clock, reset, result);
+                        if (done) begin
+                                $display("Done! %b %b %b", clock, reset, result);
+                        end
                 end
         end
 
         initial begin
-                #50 $finish;
+                #20 $finish;
         end
 
 endmodule

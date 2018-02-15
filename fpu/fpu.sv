@@ -24,17 +24,20 @@ module fpu
         input wire[command_size - 1:0] command,
 
         output reg[bitness - 1:0] result,
-        output reg[bitness - 1:0] z_out
+        output reg[bitness - 1:0] z_out,
+
+        output reg work_is_done
 
 );
-        enum reg[3:0] {unpack    = 4'b0000,
-                       pack      = 4'b0001,
-                       align     = 4'b0010,
-                       normalize = 4'b0011,
-                       sum       = 4'b0100,
-                       sub       = 4'b0101,
-                       mul       = 4'b0110,
-                       div       = 4'b1000} state;
+        enum reg[3:0] { unpack    = 4'b0000
+                      , pack      = 4'b0001
+                      , align     = 4'b0010
+                      , normalize = 4'b0011
+                      , sum       = 4'b0100
+                      , sub       = 4'b0101
+                      , mul       = 4'b0110
+                      , div       = 4'b1000
+                      , done      = 4'b1001} state;
 
 
         reg first_sign;
@@ -51,7 +54,7 @@ module fpu
 
 
         always @(posedge clock, negedge reset) begin
-                $display("State %b", state);
+                $display("State %b and first %b", state, first);
                 case(state)
                         unpack: begin
                                 first_mantissa <= first[`MANT_BITNESS(bitness) - 1:0];
@@ -63,19 +66,29 @@ module fpu
                                 second_sign     <= second[bitness - 1];
 
                                 // TODO use another state!
-                                //state <= pack;
                                 state <= pack;
                         end
 
                         pack: begin
+                                result_sign <= first_sign;
+                                result_exp <= first_exp;
+                                result_mantissa <= first_mantissa;
+
+                                // Packing result, work is done
                                 result[bitness - 1]                             <= result_sign;
                                 result[bitness - 2: `MANT_BITNESS(bitness) - 1] <= result_exp;
                                 result[`MANT_BITNESS(bitness) - 1:0]            <= result_mantissa;
+
+                                work_is_done <= 1'b1;
                         end
                 endcase
 
                 if (reset == 1) begin
                         state <= unpack;
+                end
+
+                if (state == done) begin
+                        work_is_done <= 1'b1;
                 end
         end
 
