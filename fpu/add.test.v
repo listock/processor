@@ -10,22 +10,27 @@
 
 module add_tb();
 
-        reg clock, reset;
+        reg clock, reset, input_rdy, output_rdy;
 
         reg [31:0] left, right;
 
         wire [31:0] result;
-        wire work_is_done;
 
         reg [3:0] command;
+        
+        wire input_ack;
+        reg output_ack;
 
         fpu DUT (
                 .command(command),
                 .clock(clock),
                 .reset(reset),
-                .first(left),
-                .second(right),
-                .work_is_done(work_is_done),
+                .data_a(left),
+                .data_b(right),
+                .output_rdy(output_rdy),
+                .output_ack(output_ack),
+                .input_rdy(input_rdy),
+                .input_ack(input_ack),
                 .result(result));
 
         initial begin
@@ -33,25 +38,27 @@ module add_tb();
                 right= 32'b10111111001111111111111111111111;
                 //`TEST_MESSAGE(result === left, "summ 1")
                 reset = 1'b1;
-                clock = 1'b0;
-                //reset = 1'b0;
+                input_rdy = 1;
+                clock = 1;
                 #5;
-                //reset <= 1'b0;
-                //#5;
+                reset = 0;
                 while(1) begin
-                        clock = ~clock;
-                        #1;
-                        reset = 1'b0;
-                        #1;
-                        $display("Done? %b", work_is_done);
-                        if (work_is_done == 1'b1 && clock == 1'b1) begin
-                                $display("Done! %b %b %b %b", work_is_done, clock, reset, result);
+                        #1; 
+                        clock = ~clock;                        
+                        $display("Done? %b", output_rdy);
+                        if (output_rdy && input_ack) begin
+                                
+                                $display("   Done! %b %b %b %b", output_rdy, clock, reset, result);
+                                #1;
+                                output_ack <= 1;
+                                $finish;
                         end
+                        $display("------");
                 end
         end
 
         initial begin
-                #30 $finish;
+                #50 $finish;
         end
 
 endmodule
