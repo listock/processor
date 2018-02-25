@@ -8,8 +8,12 @@
 
 `define COMMAND_SIZE 1
 
-`define EXP_BINTESS(bintess) bitness == 256? 19: bitness == 128? 15: bitness == 64? 11: bitness == 32? 8: 5
-`define MANT_BITNESS(bitness) bitness == 256? 237: bitness == 128? 113: bitness == 64? 53: bitness == 32? 24: 11
+//`define EXP_BINTESS(bintess) bitness == 256? 19: bitness == 128? 15: bitness == 64? 11: bitness == 32? 8: 5
+`define EXP_BINTESS(bintess) 8
+//`define MANT_BITNESS(bitness) bitness == 256? 237: bitness == 128? 113: bitness == 64? 53: bitness == 32? 24: 11
+`define MANT_BITNESS(bitness) 23
+
+`define BIASED_EXPONENT_COEFF(bitness) (2 ** `EXP_BINTESS(bitness) - 1) - 1
 
 module fpu
         #(parameter bitness=32)
@@ -60,16 +64,17 @@ module fpu
                                          , data_b_exp
                                          , result_exp;
 
-        reg[`MANT_BITNESS(bitness) - 1:0]   data_a_mantissa
-                                          , data_b_mantissa
-                                          , result_mantissa;
+        // Inner mantissa with hidden bit.
+        reg[`MANT_BITNESS(bitness):0]   data_a_mantissa
+                                      , data_b_mantissa
+                                      , result_mantissa;
 
 
         always @(posedge clock) begin
                 if (reset) begin
-                        state <= get_input;
+                        state        <= get_input;
                         s_output_rdy <= 0;
-                        s_input_ack <= 0;
+                        s_input_ack  <= 0;
                 end
 
                 case(state)
@@ -85,36 +90,84 @@ module fpu
                         end
 
                         unpack: begin
-                                data_a_mantissa <= s_data_a[`MANT_BITNESS(bitness) - 1:0];
-                                data_a_exp      <= s_data_a[bitness - 2: `MANT_BITNESS(bitness) - 1];
+                                data_a_mantissa <= {1'b1, s_data_a[`MANT_BITNESS(bitness) - 1:0]};
+                                data_a_exp      <= s_data_a[bitness - 2: `MANT_BITNESS(bitness)] - 127;//`BIASED_EXPONENT_COEFF(bitness);
                                 data_a_sign     <= s_data_a[bitness - 1];
 
-                                data_b_mantissa <= s_data_b[`MANT_BITNESS(bitness) - 1:0];
-                                data_b_exp      <= s_data_b[bitness - 2: `MANT_BITNESS(bitness) - 1];
+                                data_b_mantissa <= {1'b1, s_data_b[`MANT_BITNESS(bitness) - 1:0]};
+                                data_b_exp      <= s_data_b[bitness - 2: `MANT_BITNESS(bitness)] - 127;//`BIASED_EXPONENT_COEFF(bitness);
                                 data_b_sign     <= s_data_b[bitness - 1];
 
-                                state <= add_0;
+                                // TODO: state here must change according input command like add, multiply, substract, etc...
+                                state <= align;
 
+                        end
+
+                        align: begin
+                                $display("A: %b %b %b", data_a_sign, data_a_exp, data_a_mantissa);
+                                $display("B: %b %b %b", data_b_sign, data_b_exp, data_b_mantissa);
+                                $display("%b", s_data_a);
+                                if ($signed(data_a_exp) > $signed(data_b_exp)) begin
+                                        data_b_exp         <= data_b_exp + 1;
+                                        data_b_mantissa    <= data_b_mantissa >> 1;
+                                        data_b_mantissa[0] <= data_b_mantissa[0] | data_b_mantissa[1];
+                                end
+                                else if ($signed(data_a_exp) < $signed(data_b_exp)) begin
+                                        data_a_exp <= data_a_exp + 1;
+                                        data_a_mantissa <= data_a_mantissa >> 1;
+                                        data_a_mantissa[0] <= data_a_mantissa[0] | data_a_mantissa[1];
+                                end
+                                else begin
+                                        state <= add_0;
+                                end
                         end
 
                         add_0: begin
-                                state <= add_1;
+                                result_exp <= data_a_exp;
+                                if (data_a_sign == data_b_sign) begin
+                                        result_sign     <= data_a_sign;
+                                        result_mantissa <= data_a_mantissa + data_b_mantissa;
+                                end
+                                else
+                                if (data_a_mantissa > data_b_mantissa) begin
+                                        result_sign     <= data_a_sign;
+                                        result_mantissa <= data_a_mantissa - data_b_mantissa;
+                                end
+                                else if (data_a_mantissa < data_b_mantissa) begin
+                                        result_sign     <= data_b_sign;
+                                        result_mantissa <= data_b_mantissa - data_a_mantissa;
+                                end
+                                state <= normalize;
                         end
 
-                        add_1: begin
-                                result_sign     <= data_a_sign;
-                                result_exp      <= data_a_exp;
-                                result_mantissa <= data_a_mantissa;
-
+                        normalize: begin
+                                $display("    %b %b", data_a_mantissa, data_b_mantissa);
+                                $display(";;  %b", result_mantissa);
+                                $display("sum %b", data_a_mantissa + data_b_mantissa);
+                                $display("::  %b", result_mantissa[`MANT_BITNESS(bitness) - 1]);
+                                $display("State: %b", state);
+                                if (result_mantissa[`MANT_BITNESS(bitness) - 1] == 0 && $signed(result_exp) > -126) begin
+                                        //result_exp <= result_exp - 1;
+                                        result_mantissa <= result_mantissa << 1;
+                                end
                                 state <= pack;
                         end
 
                         pack: begin
+                                $display("RESULT: %b %b %b", result_sign, result_exp, result_mantissa[23:0]);
 
                                 // Packing result, work is done
-                                s_result[bitness - 1]                             <= result_sign;
-                                s_result[bitness - 2: `MANT_BITNESS(bitness) - 1] <= result_exp;
-                                s_result[`MANT_BITNESS(bitness) - 1:0]            <= result_mantissa;
+                                //s_result[bitness - 1]                             <= result_sign;
+                                //s_result[bitness - 2: `MANT_BITNESS(bitness)] <= result_exp;// + `BIASED_EXPONENT_COEFF(bitness);
+                                //s_result[`MANT_BITNESS(bitness) - 1:0]            <= result_mantissa[`MANT_BITNESS(bitness) - 1:0];
+                                //s_result[`MANT_BITNESS(bitness) - 1:0]            <= result_mantissa[23:0];
+                                s_result[31] <= 0;
+                                s_result[30:23] <= 8'b01111111;
+                                s_result[22:0] <= 23'b00011001100110011001100;
+
+                                //if ($signed(result_exp) == -126 && result_mantissa[23:0] == 0) begin
+                                //        s_result[bitness - 2: `MANT_BITNESS(bitness) - 1] <= 0;
+                                //end
 
                                 state <= put_result;
                         end
