@@ -35,14 +35,7 @@ module add_tb();
 
         initial begin
                 left = 32'b0_01111111_00000000000000000000000;
-                right= 32'b0_01111011_10011001100110011001101;
-                    //    b0_01111111_00011001100110011001101
-                    //               110011001100110011001101
-                    //               011001100110011001100110   1
-                    //               001100110011001100110011   2
-                    //               000110011001100110011001   3
-                    //               000011001100110011001100   4
-                //`TEST_MESSAGE(result === left, "summ 1")
+                right= 32'b0_01111000_01000111101011100001010;
                 reset = 1'b1;
                 input_rdy = 1;
                 clock = 1;
@@ -51,14 +44,12 @@ module add_tb();
                 while(1) begin
                         #1; 
                         clock = ~clock;
-                        //$display("Done? %b", output_rdy);
                         if (output_rdy && input_ack) begin
-                                $display("   Done! %b %b %b %b %h AND %b", output_rdy, clock, reset, result, result, result == 32'b0_01111111_00011001100110011001101);
+                                `TEST_MESSAGE((result == 32'b0_01111111_00000010100011110101110), "summ 1")
                                 #1;
                                 output_ack <= 1;
-                                $finish;
+                                //$finish;
                         end
-                        //$display("------");
                 end
         end
 
