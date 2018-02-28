@@ -103,8 +103,8 @@ module fpu
                         end
 
                         align: begin
-                        //        $display("Unpacked A: %b %b", data_a_exp, data_a_mantissa);
-                        //        $display("Unpacked Б: %b %b", data_b_exp, data_b_mantissa);
+                                $display("Unpacked A: %b %b", data_a_exp, data_a_mantissa);
+                                $display("Unpacked Б: %b %b", data_b_exp, data_b_mantissa);
                                 if ($signed(data_a_exp) > $signed(data_b_exp)) begin
                                         data_b_exp         <= data_b_exp + 1;
                                         data_b_mantissa    <= data_b_mantissa >> 1;
@@ -144,12 +144,16 @@ module fpu
                                 end
                                 state <= normalize;
                         end
+                        
+                        // TODO Округление, ебать!
 
                         normalize: begin
-                                //$display("%b %b", result_exp, result_mantissa);
-                                //if (/*result_mantissa[`MANT_SIZE(bitness)] == 0 && */$signed(result_exp) > -126) begin
-                                //        result_exp <= result_exp + 1;
-                                //        result_mantissa <= result_mantissa >> 1;
+                                $display("%b %b", data_a_exp, data_a_mantissa);
+                                $display("%b %b", data_b_exp, data_b_mantissa);
+                                $display("Normolize %b %b %d", result_exp, result_mantissa, (`MANT_SIZE(bitness) + 1));
+                                //if (result_mantissa[`MANT_SIZE(bitness)] == 0 && $signed(result_exp) > -126) begin
+                                //        result_exp <= result_exp - 1;
+                                //        result_mantissa <= result_mantissa << 1;
                                 //end
                                 
                                 // If hidden bit is not zero after adding

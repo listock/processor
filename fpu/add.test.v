@@ -75,12 +75,32 @@ module add_tb();
                                 //$finish;
                         end
                 end
-                //$display("Output ready: %d", output_rdy);
+
+                left = 32'b0_01100111_10101101011111110010101;
+                right= 32'b0_01111110_11111111111111111111110;
+                reset = 1'b1;
+                //input_rdy = 1;
+                clock = 0;
+                #5;
+                reset = 0;
+                clock = ~clock;
+                #5;
+                while(!output_rdy) begin
+                        #1; 
+                        clock = ~clock;
+                        if (output_rdy && input_ack) begin
+                                `TEST_MESSAGE((result == 32'b0_01111111_00000000000000000000000), "summ 3")
+                                $display("Result: %b", result);
+                                #1;
+                                output_ack <= 1;
+                                //$finish;
+                        end
+                end
         end
         
 
         initial begin
-                #100 $finish;
+                #900 $finish;
         end
 
 endmodule
