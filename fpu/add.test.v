@@ -33,6 +33,7 @@ module add_tb();
                 .input_ack(input_ack),
                 .result(result));
 
+        
         initial begin
                 left = 32'b0_01111111_00000000000000000000000;
                 right= 32'b0_01111000_01000111101011100001010;
@@ -41,7 +42,7 @@ module add_tb();
                 clock = 1;
                 #5;
                 reset = 0;
-                while(1) begin
+                while(!output_rdy) begin
                         #1; 
                         clock = ~clock;
                         if (output_rdy && input_ack) begin
@@ -51,10 +52,35 @@ module add_tb();
                                 //$finish;
                         end
                 end
+        //end
+
+        
+        //initial begin
+                left = 32'b0_10000011_10100000000000000000000;
+                right= 32'b0_10000011_11010000000000000000000;
+                reset = 1'b1;
+                //input_rdy = 1;
+                clock = 0;
+                #5;
+                reset = 0;
+                clock = ~clock;
+                #5;
+                while(!output_rdy) begin
+                        #1; 
+                        clock = ~clock;
+                        if (output_rdy && input_ack) begin
+                                `TEST_MESSAGE((result == 32'b0_10000100_10111000000000000000000), "summ 2 with normolize")
+                                #1;
+                                output_ack <= 1;
+                                //$finish;
+                        end
+                end
+                //$display("Output ready: %d", output_rdy);
         end
+        
 
         initial begin
-                #50 $finish;
+                #100 $finish;
         end
 
 endmodule

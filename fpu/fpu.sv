@@ -103,6 +103,8 @@ module fpu
                         end
 
                         align: begin
+                        //        $display("Unpacked A: %b %b", data_a_exp, data_a_mantissa);
+                        //        $display("Unpacked Б: %b %b", data_b_exp, data_b_mantissa);
                                 if ($signed(data_a_exp) > $signed(data_b_exp)) begin
                                         data_b_exp         <= data_b_exp + 1;
                                         data_b_mantissa    <= data_b_mantissa >> 1;
@@ -120,29 +122,45 @@ module fpu
                                 result_exp <= data_a_exp;
                                 if (data_a_sign == data_b_sign) begin
                                         result_sign     <= data_a_sign;
-                                        result_mantissa <= data_a_mantissa + data_b_mantissa;
+                                        result_mantissa <= data_a_mantissa[22:0] + data_b_mantissa[22:0];
                                 end
                                 else
-                                if (data_a_mantissa > data_b_mantissa) begin
+                                if (data_a_mantissa >= data_b_mantissa) begin
                                         result_sign     <= data_a_sign;
-                                        result_mantissa <= data_a_mantissa - data_b_mantissa;
+                                        result_mantissa <= data_a_mantissa[22:0] - data_b_mantissa[22:0];
                                 end
                                 else if (data_a_mantissa < data_b_mantissa) begin
                                         result_sign     <= data_b_sign;
-                                        result_mantissa <= data_b_mantissa - data_a_mantissa;
+                                        result_mantissa <= data_b_mantissa[22:0] - data_a_mantissa[22:0];
+                                end
+                                state <= add_1;
+                        end
+                        
+                        add_1: begin
+                                // Align result to the right if overflow occures.
+                                if (result_mantissa[`MANT_SIZE(bitness)]) begin
+                                        result_exp      <= result_exp + 1;
+                                        result_mantissa <= result_mantissa >> 1;
                                 end
                                 state <= normalize;
                         end
 
                         normalize: begin
-                                //if (result_mantissa[`MANT_SIZE(bitness) - 1] == 0 && $signed(result_exp) > -126) begin
-                                //        result_exp <= result_exp - 1;
-                                //        result_mantissa <= result_mantissa << 1;
+                                //$display("%b %b", result_exp, result_mantissa);
+                                //if (/*result_mantissa[`MANT_SIZE(bitness)] == 0 && */$signed(result_exp) > -126) begin
+                                //        result_exp <= result_exp + 1;
+                                //        result_mantissa <= result_mantissa >> 1;
+                                //end
+                                
+                                // If hidden bit is not zero after adding
+                                //if (result_mantissa[`MANT_SIZE(bitness)] == 0) begin
+                                //        
                                 //end
                                 state <= pack;
                         end
 
                         pack: begin
+                                //$display("Result: %b %b",result_exp, result_mantissa);
                                 // Packing result, work is done
                                 s_result[bitness - 1]                      <= result_sign;
                                 s_result[bitness - 2: `MANT_SIZE(bitness)] <= result_exp + `BIAS_COEFF(bitness);
