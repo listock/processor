@@ -89,7 +89,7 @@ module add_tb();
                         #1; 
                         clock = ~clock;
                         if (output_rdy && input_ack) begin
-                                `TEST_MESSAGE((result == 32'b0_01111111_00000000000000000000000), "summ 3")
+                                `TEST_MESSAGE((result == 32'b00111111011111111111111111111111), "summ 3")
                                 $display("Result: %b", result);
                                 #1;
                                 output_ack <= 1;

@@ -1,17 +1,28 @@
 /*
  * Floating point processing unit.
  *
+ * This module can perfomance next tasks with two operands:
+ *      - Add
+ *      - Subtract
+ *      - Multiply
+ *      - Division
+ *
  * Author: Aleksandr Novozhilov
  * Creating date: 2018-02-12
  *
  */
 
-`define COMMAND_SIZE 1
 
+ /* Exponent size macro.
+  */
 `define EXP_SIZE(bintess) (bitness == 256? 19: bitness == 128? 15: bitness == 64? 11: bitness == 32? 8: 5)
 
+/* Mantissa size macro.
+ */
 `define MANT_SIZE(bitness) (bitness == 256? 236: bitness == 128? 112: bitness == 64? 52: bitness == 32? 23: 10)
 
+/* Macro with exponent's bias coefficient.
+ */
 `define BIAS_COEFF(bitness) ((2 ** (`EXP_SIZE(bitness) - 1)) - 1)
 
 module fpu
@@ -144,8 +155,7 @@ module fpu
                                 end
                                 state <= normalize;
                         end
-                        
-                        // TODO Округление, ебать!
+
 
                         normalize: begin
                                 $display("%b %b", data_a_exp, data_a_mantissa);
@@ -163,9 +173,8 @@ module fpu
                                 state <= pack;
                         end
 
+                        // Packing result, work is done.
                         pack: begin
-                                //$display("Result: %b %b",result_exp, result_mantissa);
-                                // Packing result, work is done
                                 s_result[bitness - 1]                      <= result_sign;
                                 s_result[bitness - 2: `MANT_SIZE(bitness)] <= result_exp + `BIAS_COEFF(bitness);
                                 s_result[`MANT_SIZE(bitness) - 1:0]        <= result_mantissa[`MANT_SIZE(bitness) - 1:0];
