@@ -5,7 +5,7 @@
  */
 
 
-`define TEST_MESSAGE(condition, name) $display("Test \"%s\": %s", name, (condition? "ok" : "failed"));
+`define TEST_MESSAGE(result, expectation, name) $display("Test \"%s\": %s WITH value %b", name, ((result == expectation)? "ok" : "failed"), result);
 
 
 module add_tb();
@@ -33,7 +33,6 @@ module add_tb();
                 .input_ack(input_ack),
                 .result(result));
 
-        
         initial begin
                 left = 32'b0_01111111_00000000000000000000000;
                 right= 32'b0_01111000_01000111101011100001010;
@@ -42,65 +41,92 @@ module add_tb();
                 clock = 1;
                 #5;
                 reset = 0;
+                output_ack <= 0;
                 while(!output_rdy) begin
                         #1; 
                         clock = ~clock;
                         if (output_rdy && input_ack) begin
-                                `TEST_MESSAGE((result == 32'b0_01111111_00000010100011110101110), "summ 1")
+                                `TEST_MESSAGE(result, 32'b0_01111111_00000010100011110101110, "summ 1")
                                 #1;
-                                output_ack <= 1;
-                                //$finish;
-                        end
-                end
-        //end
-
-        
-        //initial begin
-                left = 32'b0_10000011_10100000000000000000000;
-                right= 32'b0_10000011_11010000000000000000000;
-                reset = 1'b1;
-                //input_rdy = 1;
-                clock = 0;
-                #5;
-                reset = 0;
-                clock = ~clock;
-                #5;
-                while(!output_rdy) begin
-                        #1; 
-                        clock = ~clock;
-                        if (output_rdy && input_ack) begin
-                                `TEST_MESSAGE((result == 32'b0_10000100_10111000000000000000000), "summ 2 with normolize")
-                                #1;
-                                output_ack <= 1;
-                                //$finish;
+                                output_ack = 1;
                         end
                 end
 
-                left = 32'b0_01100111_10101101011111110010101;
-                right= 32'b0_01111110_11111111111111111111110;
+                left = 32'b0_10000011_01010000000000000000000;
+                right= 32'b0_01111101_00101000111101011100001;
                 reset = 1'b1;
-                //input_rdy = 1;
-                clock = 0;
+                input_rdy = 1;
+                clock = 1;
                 #5;
                 reset = 0;
-                clock = ~clock;
-                #5;
+                output_ack <= 0;
                 while(!output_rdy) begin
                         #1; 
                         clock = ~clock;
                         if (output_rdy && input_ack) begin
-                                `TEST_MESSAGE((result == 32'b00111111011111111111111111111111), "summ 3")
-                                $display("Result: %b", result);
+                                `TEST_MESSAGE(result, 32'b0_10000011_01010100101000111101011, "summ 2")
+                                #1;
+                                output_ack = 1;
+                        end
+                end
+
+                left = 32'b1_01111111_00000000000000000000000;
+                right= 32'b0_10000010_10000110011001100110011;
+                reset = 1'b1;
+                input_rdy = 1;
+                clock = 1;
+                #5;
+                reset = 0;
+                output_ack <= 0;
+                while(!output_rdy) begin
+                        #1; 
+                        clock = ~clock;
+                        if (output_rdy && input_ack) begin
+                                `TEST_MESSAGE(result, 32'b0_10000010_01100110011001100110011, "summ 3")
+                                #1;
+                                output_ack = 1;
+                        end
+                end
+
+                left = 32'b1_01111111_00000000000000000000000;
+                right= 32'b1_10000010_10000110011001100110011;
+                reset = 1'b1;
+                input_rdy = 1;
+                clock = 1;
+                #5;
+                reset = 0;
+                output_ack <= 0;
+                while(!output_rdy) begin
+                        #1; 
+                        clock = ~clock;
+                        if (output_rdy && input_ack) begin
+                                `TEST_MESSAGE(result, 32'b1_10000010_10100110011001100110011, "summ 4")
+                                #1;
+                                output_ack = 1;
+                        end
+                end
+
+                left = 32'b0_11111101_00101100111011010011001;
+                right= 32'b1_01111111_00011001100110011001101;
+                reset = 1'b1;
+                input_rdy = 1;
+                clock = 1;
+                #5;
+                reset = 0;
+                output_ack <= 0;
+                while(!output_rdy) begin
+                        #1; 
+                        clock = ~clock;
+                        if (output_rdy && input_ack) begin
+                                `TEST_MESSAGE(result, 32'b0_11111101_00101100111011010011001, "summ 5")
                                 #1;
                                 output_ack <= 1;
-                                //$finish;
                         end
                 end
         end
-        
 
         initial begin
-                #900 $finish;
+                #300 $finish;
         end
 
 endmodule

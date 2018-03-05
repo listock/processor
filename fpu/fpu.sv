@@ -72,7 +72,8 @@ module fpu
 
         reg[`EXP_SIZE(bitness) - 1:0]   data_a_exp
                                       , data_b_exp
-                                      , result_exp;
+                                      , result_exp
+                                      , exp_difference;
 
         // Inner mantissa with hidden bit.
         reg[`MANT_SIZE(bitness):0]   data_a_mantissa
@@ -114,19 +115,19 @@ module fpu
                         end
 
                         align: begin
-                                $display("Unpacked A: %b %b", data_a_exp, data_a_mantissa);
-                                $display("Unpacked Б: %b %b", data_b_exp, data_b_mantissa);
+                                //$display("Unpacked A: %b %b", data_a_exp, data_a_mantissa);
+                                //$display("Unpacked Б: %b %b", data_b_exp, data_b_mantissa);
                                 if ($signed(data_a_exp) > $signed(data_b_exp)) begin
-                                        data_b_exp         <= data_b_exp + 1;
-                                        data_b_mantissa    <= data_b_mantissa >> 1;
+                                        exp_difference  = $signed(data_a_exp) - $signed(data_b_exp);
+                                        data_b_exp      = data_a_exp;
+                                        data_b_mantissa = data_b_mantissa >> exp_difference;
                                 end
                                 else if ($signed(data_a_exp) < $signed(data_b_exp)) begin
-                                        data_a_exp         <= data_a_exp + 1;
-                                        data_a_mantissa    <= data_a_mantissa >> 1;
+                                        exp_difference = $signed(data_b_exp) - $signed(data_a_exp);
+                                        data_a_exp      = data_b_exp;
+                                        data_a_mantissa = data_a_mantissa >> exp_difference;
                                 end
-                                else begin
-                                        state <= add_0;
-                                end
+                                state <= add_0;
                         end
 
                         add_0: begin
@@ -146,7 +147,7 @@ module fpu
                                 end
                                 state <= add_1;
                         end
-                        
+
                         add_1: begin
                                 // Align result to the right if overflow occures.
                                 if (result_mantissa[`MANT_SIZE(bitness)]) begin
@@ -158,17 +159,18 @@ module fpu
 
 
                         normalize: begin
-                                $display("%b %b", data_a_exp, data_a_mantissa);
-                                $display("%b %b", data_b_exp, data_b_mantissa);
-                                $display("Normolize %b %b %d", result_exp, result_mantissa, (`MANT_SIZE(bitness) + 1));
+                                //$display("%b %b", data_a_exp, data_a_mantissa);
+                                //$display("%b %b", data_b_exp, data_b_mantissa);
+                                //$display("Normolize %b %b %d", result_exp, result_mantissa, (`MANT_SIZE(bitness) + 1));
+
                                 //if (result_mantissa[`MANT_SIZE(bitness)] == 0 && $signed(result_exp) > -126) begin
                                 //        result_exp <= result_exp - 1;
                                 //        result_mantissa <= result_mantissa << 1;
                                 //end
-                                
+
                                 // If hidden bit is not zero after adding
                                 //if (result_mantissa[`MANT_SIZE(bitness)] == 0) begin
-                                //        
+                                //
                                 //end
                                 state <= pack;
                         end
