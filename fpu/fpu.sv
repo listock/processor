@@ -56,6 +56,7 @@ module fpu
                       , div        = 4'b1000
                       , put_result = 4'b1001
                       , get_input  = 4'b1010
+                      , special    = 4'b1011
               } state;
 
         reg [bitness - 1:0]   s_result
@@ -114,6 +115,17 @@ module fpu
 
                         end
 
+                        /* Special cases
+                         */
+                        special: begin
+                                // Inf case
+                                if (data_a_exp == 1 && data_a_mantissa == 0) begin
+                                end
+                                else
+                                if (data_b_exp == 1 && data_b_mantissa == 0) begin
+                                end
+                        end
+
                         align: begin
                                 //$display("Unpacked A: %b %b", data_a_exp, data_a_mantissa);
                                 //$display("Unpacked Б: %b %b", data_b_exp, data_b_mantissa);
@@ -134,16 +146,16 @@ module fpu
                                 result_exp <= data_a_exp;
                                 if (data_a_sign == data_b_sign) begin
                                         result_sign     <= data_a_sign;
-                                        result_mantissa <= data_a_mantissa[22:0] + data_b_mantissa[22:0];
+                                        result_mantissa <= data_a_mantissa[`MANT_SIZE(bitness) - 1:0] + data_b_mantissa[`MANT_SIZE(bitness) - 1:0];
                                 end
                                 else
                                 if (data_a_mantissa >= data_b_mantissa) begin
                                         result_sign     <= data_a_sign;
-                                        result_mantissa <= data_a_mantissa[22:0] - data_b_mantissa[22:0];
+                                        result_mantissa <= data_a_mantissa[`MANT_SIZE(bitness) - 1:0] - data_b_mantissa[`MANT_SIZE(bitness) - 1:0];
                                 end
                                 else if (data_a_mantissa < data_b_mantissa) begin
                                         result_sign     <= data_b_sign;
-                                        result_mantissa <= data_b_mantissa[22:0] - data_a_mantissa[22:0];
+                                        result_mantissa <= data_b_mantissa[`MANT_SIZE(bitness) - 1:0] - data_a_mantissa[`MANT_SIZE(bitness) - 1:0];
                                 end
                                 state <= add_1;
                         end
