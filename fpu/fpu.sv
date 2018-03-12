@@ -25,6 +25,10 @@
  */
 `define BIAS_COEFF(bitness) ((2 ** (`EXP_SIZE(bitness) - 1)) - 1)
 
+/* Max exponent value.
+ */
+`define MAX_EXP_VALUE(bitness) ((2 ** `EXP_SIZE(bitness)) - 1)
+
 module fpu
         #(parameter bitness=32)
 (
@@ -101,6 +105,8 @@ module fpu
                                 end
                         end
 
+                        /* Input numbers unpacking
+                         */
                         unpack: begin
                                 data_a_mantissa <= {1'b1, s_data_a[`MANT_SIZE(bitness) - 1:0]};
                                 data_a_exp      <= s_data_a[bitness - 2: `MANT_SIZE(bitness)] - `BIAS_COEFF(bitness);
@@ -111,21 +117,34 @@ module fpu
                                 data_b_sign     <= s_data_b[bitness - 1];
 
                                 // TODO: state here must change according to input command like add, multiply, substract, etc...
-                                state <= align;
+                                //state <= align;
+                                state <= special;
 
                         end
 
                         /* Special cases
                          */
                         special: begin
-                                // Inf case
-                                if (data_a_exp == 1 && data_a_mantissa == 0) begin
+                                // Inf A case
+                                if (data_a_exp == `MAX_EXP_VALUE(bitness) && data_a_mantissa == 0) begin
                                 end
                                 else
-                                if (data_b_exp == 1 && data_b_mantissa == 0) begin
+                                // Inf B case
+                                if (data_b_exp == `MAX_EXP_VALUE(bitness) && data_b_mantissa == 0) begin
                                 end
+                                else
+                                // NaN A case
+                                if (data_a_exp == `MAX_EXP_VALUE(bitness) && data_a_mantissa != 0) begin
+                                end
+                                else
+                                // NaN B case
+                                if (data_b_exp == `MAX_EXP_VALUE(bitness) && data_b_mantissa != 0) begin
+                                end
+                                state <= align;
                         end
 
+                        /* Input numbers aligning
+                         */
                         align: begin
                                 //$display("Unpacked A: %b %b", data_a_exp, data_a_mantissa);
                                 //$display("Unpacked Б: %b %b", data_b_exp, data_b_mantissa);
