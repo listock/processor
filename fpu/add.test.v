@@ -10,16 +10,16 @@
 
 module add_tb();
 
-        reg clock, reset, input_rdy, output_rdy;
+        logic clock, reset, input_rdy, output_rdy;
 
-        reg [31:0] left, right;
+        logic [31:0] left, right;
 
-        wire [31:0] result;
+        logic [31:0] result;
 
-        reg [3:0] operation;
+        logic [3:0] operation;
 
-        wire input_ack;
-        reg output_ack;
+        logic input_ack;
+        logic output_ack;
 
         fpu DUT (
                 .operation(operation),
@@ -123,7 +123,7 @@ module add_tb();
                                 output_ack = 1;
                         end
                 end
-                
+
                 left = 32'b0_11111111_00000000000000000000000;
                 right= 32'b1_01111111_00011001100110011001101;
                 reset = 1'b1;
