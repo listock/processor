@@ -142,7 +142,8 @@ module fpu
                                 end
                                 else
                                 // Case if A or B is NaN
-                                if ((data_a_exp == `MAX_EXP_VALUE(bitness) && data_a_mantissa[`MANT_SIZE(bitness) - 1:0] != 0) || (data_b_exp == `MAX_EXP_VALUE(bitness) && data_b_mantissa[`MANT_SIZE(bitness) - 1:0] != 0)) begin
+                                if ((data_a_exp == `MAX_EXP_VALUE(bitness) && data_a_mantissa[`MANT_SIZE(bitness) - 1:0] != 0) ||
+                                    (data_b_exp == `MAX_EXP_VALUE(bitness) && data_b_mantissa[`MANT_SIZE(bitness) - 1:0] != 0)) begin
                                         s_result[bitness - 1]                      <= 1;
                                         s_result[bitness - 2: `MANT_SIZE(bitness)] <= {`EXP_SIZE(bitness){1'b1}};
                                         s_result[`MANT_SIZE(bitness) - 1:0]        <= {`MANT_SIZE(bitness){1'b1}};
@@ -156,8 +157,6 @@ module fpu
                         /* Input numbers aligning
                          */
                         align: begin
-                                //$display("Unpacked A: %b %b", data_a_exp, data_a_mantissa);
-                                //$display("Unpacked Б: %b %b", data_b_exp, data_b_mantissa);
                                 if ($signed(data_a_exp) > $signed(data_b_exp)) begin
                                         exp_difference  = $signed(data_a_exp) - $signed(data_b_exp);
                                         data_b_exp      = data_a_exp;
