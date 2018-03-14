@@ -29,6 +29,8 @@
  */
 `define MAX_EXP_VALUE(bitness) (2 ** (`EXP_SIZE(bitness) - 1))
 
+typedef logic[3:0] Word_t;
+
 module fpu
         #(parameter bitness=32)
 (
@@ -44,11 +46,11 @@ module fpu
         input [bitness - 1:0] data_a,
         input [bitness - 1:0] data_b,
 
-        input [3:0] command,
+        input Word_t operation,
 
         output [bitness - 1:0] result
 );
-        enum reg[3:0] {
+        enum logic[3:0] {
                         unpack     = 4'b0000
                       , pack       = 4'b0001
                       , align      = 4'b0010
@@ -63,25 +65,27 @@ module fpu
                       , special    = 4'b1011
               } state;
 
-        reg [bitness - 1:0]   s_result
+        //enum logic [
+
+        logic [bitness - 1:0]   s_result
                             , s_out_result;
-        reg  s_output_rdy
+        logic  s_output_rdy
             ,s_input_ack;
 
-        reg [bitness - 1:0]   s_data_a
+        logic [bitness - 1:0]   s_data_a
                             , s_data_b;
 
-        reg   data_a_sign
+        logic   data_a_sign
             , data_b_sign
             , result_sign;
 
-        reg[`EXP_SIZE(bitness) - 1:0]   data_a_exp
+        logic[`EXP_SIZE(bitness) - 1:0]   data_a_exp
                                       , data_b_exp
                                       , result_exp
                                       , exp_difference;
 
         // Inner mantissa with hidden bit.
-        reg[`MANT_SIZE(bitness):0]   data_a_mantissa
+        logic[`MANT_SIZE(bitness):0]   data_a_mantissa
                                    , data_b_mantissa
                                    , result_mantissa;
 

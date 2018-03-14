@@ -16,13 +16,13 @@ module add_tb();
 
         wire [31:0] result;
 
-        reg [3:0] command;
+        reg [3:0] operation;
 
         wire input_ack;
         reg output_ack;
 
         fpu DUT (
-                .command(command),
+                .operation(operation),
                 .clock(clock),
                 .reset(reset),
                 .data_a(left),
