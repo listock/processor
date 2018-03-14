@@ -29,7 +29,14 @@
  */
 `define MAX_EXP_VALUE(bitness) (2 ** (`EXP_SIZE(bitness) - 1))
 
-typedef logic[3:0] Word_t;
+
+typedef enum logic[3:0] {
+                add = 4'b0000  // Sum A and B
+        ,       sub = 4'b0001  // Subtract A from B
+        ,       mul = 4'b0010  // Multiply A to B
+        ,       div = 4'b0011  // Division A by B
+                               // Other values are reserved
+        } Operation_t;
 
 module fpu
         #(parameter bitness=32)
@@ -46,26 +53,24 @@ module fpu
         input [bitness - 1:0] data_a,
         input [bitness - 1:0] data_b,
 
-        input Word_t operation,
+        input Operation_t operation,
 
         output [bitness - 1:0] result
 );
         enum logic[3:0] {
                         unpack     = 4'b0000
-                      , pack       = 4'b0001
-                      , align      = 4'b0010
-                      , normalize  = 4'b0011
-                      , add_0      = 4'b0100
-                      , add_1      = 4'b0101
-                      , sub        = 4'b0110
-                      , mul        = 4'b0111
-                      , div        = 4'b1000
-                      , put_result = 4'b1001
-                      , get_input  = 4'b1010
-                      , special    = 4'b1011
-              } state;
-
-        //enum logic [
+                ,       pack       = 4'b0001
+                ,       align      = 4'b0010
+                ,       normalize  = 4'b0011
+                ,       add_0      = 4'b0100
+                ,       add_1      = 4'b0101
+                ,       sub        = 4'b0110
+                ,       mul        = 4'b0111
+                ,       div        = 4'b1000
+                ,       put_result = 4'b1001
+                ,       get_input  = 4'b1010
+                ,       special    = 4'b1011
+        } state;
 
         logic [bitness - 1:0]   s_result
                             , s_out_result;
@@ -97,7 +102,7 @@ module fpu
                         s_input_ack  <= 0;
                 end
 
-                case(state)
+                case (state)
                         get_input: begin
                                 if (input_rdy) begin
                                         s_data_a <= data_a;
@@ -120,8 +125,6 @@ module fpu
                                 data_b_exp      <= s_data_b[bitness - 2: `MANT_SIZE(bitness)] - `BIAS_COEFF(bitness);
                                 data_b_sign     <= s_data_b[bitness - 1];
 
-                                // TODO: state here must change according to input command like add, multiply, substract, etc...
-                                //state <= align;
                                 state <= special;
 
                         end
@@ -132,7 +135,7 @@ module fpu
                                 // Inf A case
                                 if (data_a_exp == `MAX_EXP_VALUE(bitness) && data_a_mantissa[`MANT_SIZE(bitness) - 1:0] == 0) begin
                                         s_result[bitness - 1]                      <= 1;
-                                        s_result[bitness - 2: `MANT_SIZE(bitness)] <= {`EXP_SIZE(bitness){1'b1}};
+                                        s_result[bitness - 2: `MANT_SIZE(bitness)] <= '1;
                                         s_result[`MANT_SIZE(bitness) - 1:0]        <= 0;
                                         state <= put_result;
                                 end
@@ -140,7 +143,7 @@ module fpu
                                 // Inf B case
                                 if (data_b_exp == `MAX_EXP_VALUE(bitness) && data_b_mantissa[`MANT_SIZE(bitness) - 1:0] == 0) begin
                                         s_result[bitness - 1]                      <= 1;
-                                        s_result[bitness - 2: `MANT_SIZE(bitness)] <= {`EXP_SIZE(bitness){1'b1}};
+                                        s_result[bitness - 2: `MANT_SIZE(bitness)] <= '1;
                                         s_result[`MANT_SIZE(bitness) - 1:0]        <= 0;
                                         state <= put_result;
                                 end
@@ -149,12 +152,22 @@ module fpu
                                 if ((data_a_exp == `MAX_EXP_VALUE(bitness) && data_a_mantissa[`MANT_SIZE(bitness) - 1:0] != 0) ||
                                     (data_b_exp == `MAX_EXP_VALUE(bitness) && data_b_mantissa[`MANT_SIZE(bitness) - 1:0] != 0)) begin
                                         s_result[bitness - 1]                      <= 1;
-                                        s_result[bitness - 2: `MANT_SIZE(bitness)] <= {`EXP_SIZE(bitness){1'b1}};
-                                        s_result[`MANT_SIZE(bitness) - 1:0]        <= {`MANT_SIZE(bitness){1'b1}};
+                                        s_result[bitness - 2: `MANT_SIZE(bitness)] <= '1;
+                                        s_result[`MANT_SIZE(bitness) - 1:0]        <= '1;
                                         state <= put_result;
                                 end
                                 else begin
-                                        state <= align;
+                                        /* Hadling operations.
+                                         *
+                                         */
+                                        case (operation)
+                                                add: begin
+                                                        state <= align;
+                                                end
+                                                default: begin
+                                                        state <= put_result;
+                                                end
+                                        endcase
                                 end
                         end
 

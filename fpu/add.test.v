@@ -34,6 +34,10 @@ module add_tb();
                 .result(result));
 
         initial begin
+
+                // Let's start testing add operation
+                operation = 4'b0000;
+
                 left = 32'b0_01111111_00000000000000000000000;
                 right= 32'b0_01111000_01000111101011100001010;
                 reset = 1'b1;
