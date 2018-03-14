@@ -27,7 +27,7 @@
 
 /* Max exponent value.
  */
-`define MAX_EXP_VALUE(bitness) ((2 ** `EXP_SIZE(bitness)) - 1)
+`define MAX_EXP_VALUE(bitness) (2 ** (`EXP_SIZE(bitness) - 1))
 
 module fpu
         #(parameter bitness=32)
@@ -126,21 +126,31 @@ module fpu
                          */
                         special: begin
                                 // Inf A case
-                                if (data_a_exp == `MAX_EXP_VALUE(bitness) && data_a_mantissa == 0) begin
+                                if (data_a_exp == `MAX_EXP_VALUE(bitness) && data_a_mantissa[`MANT_SIZE(bitness) - 1:0] == 0) begin
+                                        s_result[bitness - 1]                      <= 1;
+                                        s_result[bitness - 2: `MANT_SIZE(bitness)] <= {`EXP_SIZE(bitness){1'b1}};
+                                        s_result[`MANT_SIZE(bitness) - 1:0]        <= 0;
+                                        state <= put_result;
                                 end
                                 else
                                 // Inf B case
-                                if (data_b_exp == `MAX_EXP_VALUE(bitness) && data_b_mantissa == 0) begin
+                                if (data_b_exp == `MAX_EXP_VALUE(bitness) && data_b_mantissa[`MANT_SIZE(bitness) - 1:0] == 0) begin
+                                        s_result[bitness - 1]                      <= 1;
+                                        s_result[bitness - 2: `MANT_SIZE(bitness)] <= {`EXP_SIZE(bitness){1'b1}};
+                                        s_result[`MANT_SIZE(bitness) - 1:0]        <= 0;
+                                        state <= put_result;
                                 end
                                 else
-                                // NaN A case
-                                if (data_a_exp == `MAX_EXP_VALUE(bitness) && data_a_mantissa != 0) begin
+                                // Case if A or B is NaN
+                                if ((data_a_exp == `MAX_EXP_VALUE(bitness) && data_a_mantissa[`MANT_SIZE(bitness) - 1:0] != 0) || (data_b_exp == `MAX_EXP_VALUE(bitness) && data_b_mantissa[`MANT_SIZE(bitness) - 1:0] != 0)) begin
+                                        s_result[bitness - 1]                      <= 1;
+                                        s_result[bitness - 2: `MANT_SIZE(bitness)] <= {`EXP_SIZE(bitness){1'b1}};
+                                        s_result[`MANT_SIZE(bitness) - 1:0]        <= {`MANT_SIZE(bitness){1'b1}};
+                                        state <= put_result;
                                 end
-                                else
-                                // NaN B case
-                                if (data_b_exp == `MAX_EXP_VALUE(bitness) && data_b_mantissa != 0) begin
+                                else begin
+                                        state <= align;
                                 end
-                                state <= align;
                         end
 
                         /* Input numbers aligning

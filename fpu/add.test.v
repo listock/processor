@@ -120,13 +120,67 @@ module add_tb();
                         if (output_rdy && input_ack) begin
                                 `TEST_MESSAGE(result, 32'b0_11111101_00101100111011010011001, "summ 5")
                                 #1;
-                                output_ack <= 1;
+                                output_ack = 1;
+                        end
+                end
+                
+                left = 32'b0_11111111_00000000000000000000000;
+                right= 32'b1_01111111_00011001100110011001101;
+                reset = 1'b1;
+                input_rdy = 1;
+                clock = 1;
+                #5;
+                reset = 0;
+                output_ack <= 0;
+                while(!output_rdy) begin
+                        #1; 
+                        clock = ~clock;
+                        if (output_rdy && input_ack) begin
+                                `TEST_MESSAGE(result, 32'b11111111100000000000000000000000, "summ 6")
+                                #1;
+                                output_ack = 1;
+                        end
+                end
+
+                left = 32'b1_01111111_00011001100110011001101;
+                right= 32'b0_11111111_00000000000000000000000;
+                reset = 1'b1;
+                input_rdy = 1;
+                clock = 1;
+                #5;
+                reset = 0;
+                output_ack <= 0;
+                while(!output_rdy) begin
+                        #1; 
+                        clock = ~clock;
+                        if (output_rdy && input_ack) begin
+                                `TEST_MESSAGE(result, 32'b11111111100000000000000000000000, "summ 7")
+                                #1;
+                                output_ack = 1;
+                        end
+                end
+
+                left = 32'b1_11111111_00011001100110011001101;
+                right= 32'b0_11111111_00011001100110011001101;
+                reset = 1'b1;
+                input_rdy = 1;
+                clock = 1;
+                #5;
+                reset = 0;
+                output_ack <= 0;
+                while(!output_rdy) begin
+                        #1; 
+                        clock = ~clock;
+                        if (output_rdy && input_ack) begin
+                                `TEST_MESSAGE(result, 32'b11111111111111111111111111111111, "summ 8")
+                                #1;
+                                output_ack = 1;
                         end
                 end
         end
 
         initial begin
-                #300 $finish;
+                #500 $finish;
         end
 
 endmodule
