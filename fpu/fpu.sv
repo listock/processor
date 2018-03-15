@@ -17,10 +17,10 @@
 /* Operation type.
  */
 typedef enum logic[3:0] {
-                add = 4'b0000  // Sum A and B
-        ,       sub = 4'b0001  // Subtract A from B
-        ,       mul = 4'b0010  // Multiply A to B
-        ,       div = 4'b0011  // Division A by B
+                add_op = 4'b0000  // Sum A and B
+        ,       sub_op = 4'b0001  // Subtract A from B
+        ,       mul_op = 4'b0010  // Multiply A to B
+        ,       div_op = 4'b0011  // Division A by B
                                // Other values are reserved
         } Operation_t;
 
@@ -148,8 +148,11 @@ module fpu
                                          *
                                          */
                                         case (operation)
-                                                add: begin
+                                                add_op: begin
                                                         state <= align;
+                                                end
+                                                mul_op: begin
+                                                        state <= mul;
                                                 end
                                                 default: begin
                                                         state <= put_result;
@@ -198,6 +201,14 @@ module fpu
                                         result_exp      <= result_exp + 1;
                                         result_mantissa <= result_mantissa >> 1;
                                 end
+                                state <= normalize;
+                        end
+
+                        mul: begin
+                                result_sign     <= data_a_sign || data_b_sign;
+                                result_exp      <= data_a_exp + data_b_exp;
+                                result_mantissa <= data_a_mantissa * data_b_mantissa;
+
                                 state <= normalize;
                         end
 
