@@ -154,6 +154,9 @@ module fpu
                                                 mul_op: begin
                                                         state <= mul;
                                                 end
+                                                div_op: begin
+                                                        state <= div;
+                                                end
                                                 default: begin
                                                         state <= put_result;
                                                 end
@@ -212,6 +215,13 @@ module fpu
                                 state <= normalize;
                         end
 
+                        div: begin
+                                result_sign     <= data_a_sign || data_b_sign;
+                                result_exp      <= data_a_exp - data_b_exp;
+                                result_mantissa <= data_a_mantissa / data_b_mantissa;
+
+                                state <= normalize;
+                        end
 
                         normalize: begin
                                 //$display("%b %b", data_a_exp, data_a_mantissa);
