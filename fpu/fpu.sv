@@ -45,18 +45,19 @@ module fpu
         output [bitness - 1:0] result
 );
         enum logic[3:0] {
-                        unpack     = 4'b0000
-                ,       pack       = 4'b0001
-                ,       align      = 4'b0010
-                ,       normalize  = 4'b0011
-                ,       add_0      = 4'b0100
-                ,       add_1      = 4'b0101
-                ,       sub        = 4'b0110
-                ,       mul        = 4'b0111
-                ,       div        = 4'b1000
-                ,       put_result = 4'b1001
-                ,       get_input  = 4'b1010
-                ,       special    = 4'b1011
+                        unpack      = 4'b0000
+                ,       pack        = 4'b0001
+                ,       align       = 4'b0010
+                ,       normalize   = 4'b0011
+                ,       add_0       = 4'b0100
+                ,       add_1       = 4'b0101
+                ,       sub         = 4'b0110
+                ,       mul         = 4'b0111
+                ,       div         = 4'b1000
+                ,       put_result  = 4'b1001
+                ,       get_input   = 4'b1010
+                ,       special     = 4'b1011
+                ,       op_handling = 4'b1100
         } state;
 
         logic [bitness - 1:0]   s_result
@@ -144,11 +145,17 @@ module fpu
                                         state <= put_result;
                                 end
                                 else begin
-                                        /* Hadling operations.
-                                         *
-                                         */
-                                        case (operation)
+                                    state <= op_handling;
+                                end
+                        end
+
+                        op_handling: begin
+                                           case (operation)
                                                 add_op: begin
+                                                        state <= align;
+                                                end
+                                                sub_op: begin
+                                                        data_b_sign <= ~data_b_sign;
                                                         state <= align;
                                                 end
                                                 mul_op: begin
@@ -161,7 +168,6 @@ module fpu
                                                         state <= put_result;
                                                 end
                                         endcase
-                                end
                         end
 
                         /* Input numbers aligning
@@ -177,10 +183,26 @@ module fpu
                                         data_a_exp      = data_b_exp;
                                         data_a_mantissa = data_a_mantissa >> exp_difference;
                                 end
-                                state <= add_0;
+                                case (operation)
+                                    add_op:
+                                        state <= add_0;
+                                    sub_op:
+                                        state <= sub;
+                                endcase
+                        end
+
+                        sub: begin
+                                result_sign     <= 0;
+                                result_exp      <= data_a_exp;
+                                result_mantissa <= {1'b0, data_a_mantissa[22:0] - data_b_mantissa[22:0]};
+
+                                state <= normalize;
                         end
 
                         add_0: begin
+                                $display("A: %b %b %b", data_a_sign, data_a_exp, data_a_mantissa);
+                                $display("B: %b %b %b", data_b_sign, data_b_exp, data_b_mantissa);
+
                                 result_exp <= data_a_exp;
                                 if (data_a_sign == data_b_sign) begin
                                         result_sign     <= data_a_sign;
@@ -196,6 +218,7 @@ module fpu
                                         result_mantissa <= data_b_mantissa[`MANT_SIZE(bitness) - 1:0] - data_a_mantissa[`MANT_SIZE(bitness) - 1:0];
                                 end
                                 state <= add_1;
+                                //state <= normalize;
                         end
 
                         add_1: begin
@@ -204,7 +227,7 @@ module fpu
                                         result_exp      <= result_exp + 1;
                                         result_mantissa <= result_mantissa >> 1;
                                 end
-                                state <= normalize;
+                                state <= pack;
                         end
 
                         mul: begin
@@ -212,7 +235,7 @@ module fpu
                                 result_exp      <= data_a_exp + data_b_exp;
                                 result_mantissa <= data_a_mantissa * data_b_mantissa;
 
-                                state <= normalize;
+                                state <= pack;
                         end
 
                         div: begin
@@ -220,10 +243,18 @@ module fpu
                                 result_exp      <= data_a_exp - data_b_exp;
                                 result_mantissa <= data_a_mantissa / data_b_mantissa;
 
-                                state <= normalize;
+                                state <= pack;
                         end
 
                         normalize: begin
+                                $display("NORM STEP: %b %b", result_exp, result_mantissa);
+                                if (result_mantissa[`MANT_SIZE(bitness)] == 0) begin
+                                    result_exp <= result_exp - 1;
+                                    result_mantissa <= result_mantissa << 1;
+                                end
+                                else begin
+                                    state <= pack;
+                                end
                                 //$display("%b %b", data_a_exp, data_a_mantissa);
                                 //$display("%b %b", data_b_exp, data_b_mantissa);
                                 //$display("Normolize %b %b %d", result_exp, result_mantissa, (`MANT_SIZE(bitness) + 1));
@@ -237,7 +268,7 @@ module fpu
                                 //if (result_mantissa[`MANT_SIZE(bitness)] == 0) begin
                                 //
                                 //end
-                                state <= pack;
+                                //state <= pack;
                         end
 
                         // Packing result, work is done.
