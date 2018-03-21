@@ -240,26 +240,6 @@ module add_tb();
                                 output_ack = 1;
                         end
                 end
-
-                operation = 4'b0001;
-
-                left = 32'b0_10000001_00000000000000000000000;
-                right= 32'b0_10000000_00000000000000000000000;
-                reset = 1'b1;
-                input_rdy = 1;
-                clock = 1;
-                #5;
-                reset = 0;
-                output_ack <= 0;
-                while(!output_rdy) begin
-                        #1; 
-                        clock = ~clock;
-                        if (output_rdy && input_ack) begin
-                                `TEST_MESSAGE(result, 32'b0_10000000_00000000000000000000000, "Substraction 4.0 - 2.0 = 2.0")
-                                #1;
-                                output_ack = 1;
-                        end
-                end
         end
 
         initial begin

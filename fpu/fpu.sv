@@ -154,10 +154,6 @@ module fpu
                                                 add_op: begin
                                                         state <= align;
                                                 end
-                                                sub_op: begin
-                                                        data_b_sign <= ~data_b_sign;
-                                                        state <= align;
-                                                end
                                                 mul_op: begin
                                                         state <= mul;
                                                 end
@@ -183,20 +179,7 @@ module fpu
                                         data_a_exp      = data_b_exp;
                                         data_a_mantissa = data_a_mantissa >> exp_difference;
                                 end
-                                case (operation)
-                                    add_op:
-                                        state <= add_0;
-                                    sub_op:
-                                        state <= sub;
-                                endcase
-                        end
-
-                        sub: begin
-                                result_sign     <= 0;
-                                result_exp      <= data_a_exp;
-                                result_mantissa <= {1'b0, data_a_mantissa[22:0] - data_b_mantissa[22:0]};
-
-                                state <= normalize;
+                                state <= add_0;
                         end
 
                         add_0: begin
