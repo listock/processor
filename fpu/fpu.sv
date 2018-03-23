@@ -60,24 +60,39 @@ module fpu
                 ,       op_handling = 4'b1100
         } state;
 
+        typedef struct packed {
+                bit                            sign;
+                bit [`EXP_SIZE(bitness) - 1:0] exponent;
+                bit [`MANT_SIZE(bitness)   :0] significand;
+        } Number_t;
+
         logic [bitness - 1:0]   s_result
                             , s_out_result;
         logic  s_output_rdy
             ,s_input_ack;
 
+        // TODO: DELETE
         logic [bitness - 1:0]   s_data_a
                             , s_data_b;
 
+        // TODO: DELETE
         logic   data_a_sign
             , data_b_sign
             , result_sign;
 
+        Number_t
+                        i_data_a
+                ,       i_data_b
+                ,       i_result;
+
+        // TODO: DELETE
         logic[`EXP_SIZE(bitness) - 1:0]   data_a_exp
                                       , data_b_exp
                                       , result_exp
                                       , exp_difference;
 
         // Inner mantissa with hidden bit.
+        // TODO: DELETE
         logic[`MANT_SIZE(bitness):0]   data_a_mantissa
                                    , data_b_mantissa
                                    , result_mantissa;
@@ -93,8 +108,12 @@ module fpu
                 case (state)
                         get_input: begin
                                 if (input_rdy) begin
+                                        // TODO: DELETE
                                         s_data_a <= data_a;
                                         s_data_b <= data_b;
+
+                                        i_data_a <= data_a;
+                                        i_data_b <= data_b;
 
                                         s_input_ack <= 1;
 
@@ -105,6 +124,7 @@ module fpu
                         /* Input numbers unpacking
                          */
                         unpack: begin
+                                // TODO: DELETE! С использованием структуры не имеет смысла
                                 data_a_mantissa <= {1'b1, s_data_a[`MANT_SIZE(bitness) - 1:0]};
                                 data_a_exp      <= s_data_a[bitness - 2: `MANT_SIZE(bitness)] - `BIAS_COEFF(bitness);
                                 data_a_sign     <= s_data_a[bitness - 1];
@@ -113,6 +133,9 @@ module fpu
                                 data_b_exp      <= s_data_b[bitness - 2: `MANT_SIZE(bitness)] - `BIAS_COEFF(bitness);
                                 data_b_sign     <= s_data_b[bitness - 1];
 
+                                i_data_a.exponent <= i_data_a.exponent - `BIAS_COEFF(bitness);
+                                i_data_b.exponent <= i_data_b.exponent - `BIAS_COEFF(bitness);
+
                                 state <= special;
 
                         end
@@ -120,28 +143,47 @@ module fpu
                         /* Special cases
                          */
                         special: begin
+                                $display("SPECTIAL: %b %b", i_data_a.exponent, i_data_a.significand);
+                                $display("        : %b", data_a_exp);
+                                $display("MAXVALUE: %b", `MAX_EXP_VALUE(bitness));
                                 // Inf A case
-                                if (data_a_exp == `MAX_EXP_VALUE(bitness) && data_a_mantissa[`MANT_SIZE(bitness) - 1:0] == 0) begin
+                                //if (data_a_exp == `MAX_EXP_VALUE(bitness) && data_a_mantissa[`MANT_SIZE(bitness) - 1:0] == 0) begin
+                                if (i_data_a.exponent == `MAX_EXP_VALUE(bitness) && i_data_a.significand == 0) begin
                                         s_result[bitness - 1]                      <= 1;
                                         s_result[bitness - 2: `MANT_SIZE(bitness)] <= '1;
                                         s_result[`MANT_SIZE(bitness) - 1:0]        <= 0;
+
+                                        i_result.sign        <= 1;
+                                        i_result.exponent    <= '1;
+                                        i_result.significand <= '0;
                                         state <= put_result;
                                 end
                                 else
                                 // Inf B case
-                                if (data_b_exp == `MAX_EXP_VALUE(bitness) && data_b_mantissa[`MANT_SIZE(bitness) - 1:0] == 0) begin
+                                //if (data_b_exp == `MAX_EXP_VALUE(bitness) && data_b_mantissa[`MANT_SIZE(bitness) - 1:0] == 0) begin
+                                if (i_data_b.exponent == `MAX_EXP_VALUE(bitness) && i_data_b.significand == 0) begin
                                         s_result[bitness - 1]                      <= 1;
                                         s_result[bitness - 2: `MANT_SIZE(bitness)] <= '1;
                                         s_result[`MANT_SIZE(bitness) - 1:0]        <= 0;
+
+                                        i_result.sign        <= 1;
+                                        i_result.exponent    <= '1;
+                                        i_result.significand <= '0;
                                         state <= put_result;
                                 end
                                 else
                                 // Case if A or B is NaN
-                                if ((data_a_exp == `MAX_EXP_VALUE(bitness) && data_a_mantissa[`MANT_SIZE(bitness) - 1:0] != 0) ||
-                                    (data_b_exp == `MAX_EXP_VALUE(bitness) && data_b_mantissa[`MANT_SIZE(bitness) - 1:0] != 0)) begin
+                                //if ((data_a_exp == `MAX_EXP_VALUE(bitness) && data_a_mantissa[`MANT_SIZE(bitness) - 1:0] != 0) ||
+                                //    (data_b_exp == `MAX_EXP_VALUE(bitness) && data_b_mantissa[`MANT_SIZE(bitness) - 1:0] != 0)) begin
+                                if ((i_data_a.exponent == `MAX_EXP_VALUE(bitness) && i_data_a.significand != 0) ||
+                                    (i_data_b.exponent == `MAX_EXP_VALUE(bitness) && i_data_b.significand != 0)) begin
                                         s_result[bitness - 1]                      <= 1;
                                         s_result[bitness - 2: `MANT_SIZE(bitness)] <= '1;
                                         s_result[`MANT_SIZE(bitness) - 1:0]        <= '1;
+
+                                        i_result.sign        <= 1;
+                                        i_result.exponent    <= '1;
+                                        i_result.significand <= '1;
                                         state <= put_result;
                                 end
                                 else begin
@@ -169,36 +211,58 @@ module fpu
                         /* Input numbers aligning
                          */
                         align: begin
-                                if ($signed(data_a_exp) > $signed(data_b_exp)) begin
+                                //if ($signed(data_a_exp) > $signed(data_b_exp)) begin
+                                if ($signed(i_data_a.exponent) > $signed(i_data_b.exponent)) begin
                                         exp_difference  = $signed(data_a_exp) - $signed(data_b_exp);
                                         data_b_exp      = data_a_exp;
                                         data_b_mantissa = data_b_mantissa >> exp_difference;
+
+                                        i_data_b.exponent    = i_data_b.exponent;
+                                        i_data_b.significand = i_data_b.significand >> exp_difference;
                                 end
-                                else if ($signed(data_a_exp) < $signed(data_b_exp)) begin
+                                //else if ($signed(data_a_exp) < $signed(data_b_exp)) begin
+                                else if ($signed(i_data_a.exponent) < $signed(i_data_b.exponent)) begin
                                         exp_difference = $signed(data_b_exp) - $signed(data_a_exp);
                                         data_a_exp      = data_b_exp;
                                         data_a_mantissa = data_a_mantissa >> exp_difference;
+
+                                        i_data_a.exponent    = i_data_b.exponent;
+                                        i_data_a.significand = i_data_a.significand >> exp_difference;
                                 end
                                 state <= add_0;
                         end
 
                         add_0: begin
-                                $display("A: %b %b %b", data_a_sign, data_a_exp, data_a_mantissa);
-                                $display("B: %b %b %b", data_b_sign, data_b_exp, data_b_mantissa);
+                                $display("A: %b %b %b", i_data_a.sign, i_data_a.exponent, i_data_a.significand);
+                                $display("B: %b %b %b", i_data_b.sign, i_data_b.exponent, i_data_b.significand);
 
-                                result_exp <= data_a_exp;
-                                if (data_a_sign == data_b_sign) begin
+                                //result_exp <= data_a_exp;
+                                i_result.exponent <= i_data_a.exponent;
+                                //if (data_a_sign == data_b_sign) begin
+                                if (i_data_a.sign == i_data_b.sign) begin
                                         result_sign     <= data_a_sign;
                                         result_mantissa <= data_a_mantissa[`MANT_SIZE(bitness) - 1:0] + data_b_mantissa[`MANT_SIZE(bitness) - 1:0];
+
+                                        i_result.sign        <= i_data_a.sign;
+                                        i_result.significand <= i_data_a.significand + i_data_b.significand;
                                 end
                                 else
-                                if (data_a_mantissa >= data_b_mantissa) begin
+                                //if (data_a_mantissa >= data_b_mantissa) begin
+                                if (i_data_a.significand >= i_data_b.significand) begin
                                         result_sign     <= data_a_sign;
                                         result_mantissa <= data_a_mantissa[`MANT_SIZE(bitness) - 1:0] - data_b_mantissa[`MANT_SIZE(bitness) - 1:0];
+
+                                        i_result.sign        <= i_data_a.sign;
+                                        i_result.significand <= i_data_a.significand - i_data_b.significand;
                                 end
-                                else if (data_a_mantissa < data_b_mantissa) begin
+                                //else if (data_a_mantissa < data_b_mantissa) begin
+                                else
+                                if (i_data_a.significand < i_data_b.significand) begin
                                         result_sign     <= data_b_sign;
                                         result_mantissa <= data_b_mantissa[`MANT_SIZE(bitness) - 1:0] - data_a_mantissa[`MANT_SIZE(bitness) - 1:0];
+
+                                        i_result.sign        <= i_data_b.sign;
+                                        i_result.significand <= i_data_b.significand - i_data_a.significand;
                                 end
                                 state <= add_1;
                                 //state <= normalize;
@@ -209,6 +273,11 @@ module fpu
                                 if (result_mantissa[`MANT_SIZE(bitness)]) begin
                                         result_exp      <= result_exp + 1;
                                         result_mantissa <= result_mantissa >> 1;
+                                end
+
+                                if (i_result.significand[`MANT_SIZE(bitness)]) begin
+                                        i_result.exponent    <= i_result.exponent + 1;
+                                        i_result.significand <= i_result.significand >> 1;
                                 end
                                 state <= pack;
                         end
@@ -264,6 +333,15 @@ module fpu
                         end
 
                         put_result: begin
+                                s_out_result <= i_result;
+                                s_output_rdy <= 1;
+
+                                if (s_out_result && output_ack) begin
+                                        s_output_rdy <= 0;
+                                        state        <= get_input;
+                                end
+
+                                /*
                                 s_out_result <= s_result;
                                 s_output_rdy <= 1;
 
@@ -271,6 +349,7 @@ module fpu
                                         s_output_rdy <= 0;
                                         state        <= get_input;
                                 end
+                                */
                         end
 
                 endcase
