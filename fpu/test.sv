@@ -38,7 +38,6 @@ module add_tb();
                 // Let's start testing add operation
                 operation = 4'b0000;
 
-                /*
                 left = 32'b0_01111111_00000000000000000000000;
                 right= 32'b0_01111000_01000111101011100001010;
                 reset = 1'b1;
@@ -51,7 +50,7 @@ module add_tb();
                         #1;
                         clock = ~clock;
                         if (output_rdy && input_ack) begin
-                                `TEST_MESSAGE(result, 32'b0_01111111_00000010100011110101110, "summ 1")
+                                `TEST_MESSAGE(result, 32'b0_01111111_00000010100011110101110, "Addition 1.0 + 0.01 = 1.01")
                                 #1;
                                 output_ack = 1;
                         end
@@ -69,11 +68,11 @@ module add_tb();
                         #1;
                         clock = ~clock;
                         if (output_rdy && input_ack) begin
-                                `TEST_MESSAGE(result, 32'b0_10000011_01010100101000111101011, "summ 2")
+                                `TEST_MESSAGE(result, 32'b0_10000011_01010100101000111101011, "Addition 21.0 + 0.29 = 21.29")
                                 #1;
                                 output_ack = 1;
                         end
-                end*/
+                end
 
                 left = 32'b1_01111111_00000000000000000000000;
                 right= 32'b0_10000010_10000110011001100110011;
