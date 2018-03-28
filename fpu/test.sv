@@ -140,7 +140,7 @@ module add_tb();
                         #1;
                         clock = ~clock;
                         if (output_rdy && input_ack) begin
-                                `TEST_MESSAGE(result, 32'b11111111100000000000000000000000, "summ 6")
+                                `TEST_MESSAGE(result, 32'b11111111100000000000000000000000, "Addition 1.1 + (-Inf) = -Inf")
                                 #1;
                                 output_ack = 1;
                         end
@@ -158,7 +158,7 @@ module add_tb();
                         #1;
                         clock = ~clock;
                         if (output_rdy && input_ack) begin
-                                `TEST_MESSAGE(result, 32'b11111111100000000000000000000000, "summ 7")
+                                `TEST_MESSAGE(result, 32'b11111111100000000000000000000000, "Addition -1.1 + Inf = -Inf")
                                 #1;
                                 output_ack = 1;
                         end
@@ -201,7 +201,7 @@ module add_tb();
                 end
 
                 /* Multiply operation test */
-                /*operation = 4'b0010;
+                operation = 4'b0010;
 
                 left = 32'b0_10000000_00000000000000000000000;
                 right= 32'b0_10000000_00000000000000000000000;
@@ -258,7 +258,6 @@ module add_tb();
                                 output_ack = 1;
                         end
                 end
-                */
         end
 
         initial begin

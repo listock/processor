@@ -234,11 +234,10 @@ module fpu
                         end
 
                         mul: begin
-                                result_sign     <= data_a_sign || data_b_sign;
-                                result_exp      <= data_a_exp + data_b_exp;
-                                result_mantissa <= data_a_mantissa * data_b_mantissa;
+                                i_result.sign <= i_data_a.sign || i_data_b.sign;
+                                i_result.exponent <= i_data_a.exponent + i_data_b.exponent;
+                                i_result.significand <= i_data_a.significand * i_data_b.significand;
 
-                                //state <= pack;
                                 state <= bias_out_calc;
                         end
 
