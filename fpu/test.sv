@@ -5,7 +5,7 @@
  */
 
 
-`define TEST_MESSAGE(result, expectation, name) $display("Test \"%s\": %s WITH value %b", name, ((result == expectation)? "OK" : "FAILED"), result);
+`define TEST_MESSAGE(result, expectation, name) $display("Test \"%s\": %s WITH value %b Needs: %b", name, ((result == expectation)? "OK" : "FAILED"), result, expectation);
 
 
 module add_tb();
