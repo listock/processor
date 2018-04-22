@@ -67,37 +67,20 @@ module fpu
                 bit [`MANT_SIZE(bitness)   :0] significand;
         } Number_t;
 
-        logic [bitness - 1:0]   s_result
-                            , s_out_result;
-        logic  s_output_rdy
-            ,s_input_ack;
+        logic [bitness - 1:0]
+                        s_result
+                ,       s_out_result;
 
-        // TODO: DELETE
-        logic [bitness - 1:0]   s_data_a
-                            , s_data_b;
-
-        // TODO: DELETE
-        logic   data_a_sign
-            , data_b_sign
-            , result_sign;
+        logic
+                        s_output_rdy
+                ,       s_input_ack;
 
         Number_t
                         i_data_a
                 ,       i_data_b
                 ,       i_result;
 
-        // TODO: DELETE
-        logic[`EXP_SIZE(bitness) - 1:0]   data_a_exp
-                                      , data_b_exp
-                                      , result_exp
-                                      , exp_difference;
-
-        // Inner mantissa with hidden bit.
-        // TODO: DELETE
-        logic[`MANT_SIZE(bitness):0]   data_a_mantissa
-                                   , data_b_mantissa
-                                   , result_mantissa;
-
+        logic[`EXP_SIZE(bitness) - 1:0] exp_difference;
 
         always @(posedge clock) begin
                 if (reset) begin
@@ -219,17 +202,10 @@ module fpu
                         end
 
                         add_1: begin
-                                // Align result to the right if overflow occures.
-                                //if (result_mantissa[`MANT_SIZE(bitness)]) begin
-                                        //result_exp      <= result_exp + 1;
-                                        //result_mantissa <= result_mantissa >> 1;
-                                //end
-
                                 if (i_result.significand[`MANT_SIZE(bitness)]) begin
                                         i_result.exponent    <= i_result.exponent + 1;
                                         i_result.significand <= i_result.significand >> 1;
                                 end
-                                //state <= pack;
                                 state <= bias_out_calc;
                         end
 
@@ -250,38 +226,7 @@ module fpu
                         end
 
                         normalize: begin
-                                $display("NORM STEP: %b %b", result_exp, result_mantissa);
-                                if (result_mantissa[`MANT_SIZE(bitness)] == 0) begin
-                                    result_exp <= result_exp - 1;
-                                    result_mantissa <= result_mantissa << 1;
-                                end
-                                else begin
-                                        state <= bias_out_calc;
-                                end
-                                //$display("%b %b", data_a_exp, data_a_mantissa);
-                                //$display("%b %b", data_b_exp, data_b_mantissa);
-                                //$display("Normolize %b %b %d", result_exp, result_mantissa, (`MANT_SIZE(bitness) + 1));
-
-                                //if (result_mantissa[`MANT_SIZE(bitness)] == 0 && $signed(result_exp) > -126) begin
-                                //        result_exp <= result_exp - 1;
-                                //        result_mantissa <= result_mantissa << 1;
-                                //end
-
-                                // If hidden bit is not zero after adding
-                                //if (result_mantissa[`MANT_SIZE(bitness)] == 0) begin
-                                //
-                                //end
-                                //state <= pack;
                         end
-
-                        // Packing result, work is done.
-                        //pack: begin
-                                //s_result[bitness - 1]                      <= result_sign;
-                                //s_result[bitness - 2: `MANT_SIZE(bitness)] <= result_exp + `BIAS_COEFF(bitness);
-                                //s_result[`MANT_SIZE(bitness) - 1:0]        <= result_mantissa[`MANT_SIZE(bitness) - 1:0];
-
-                                //state <= put_result;
-                        //end
 
                         bias_out_calc: begin
                                 i_result.exponent <= i_result.exponent + `BIAS_COEFF(bitness);
@@ -303,16 +248,6 @@ module fpu
                                         s_output_rdy <= 0;
                                         state        <= get_input;
                                 end
-
-                                /*
-                                s_out_result <= s_result;
-                                s_output_rdy <= 1;
-
-                                if (s_output_rdy && output_ack) begin
-                                        s_output_rdy <= 0;
-                                        state        <= get_input;
-                                end
-                                */
                         end
 
                 endcase
