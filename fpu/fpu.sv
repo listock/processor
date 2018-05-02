@@ -238,7 +238,6 @@ module fpu
                                 // Пакуется криво, добавляется на кой-то хер с
                                 // крытый бит
                                 $display("RESULT: %b", i_result);
-                                //s_out_result <= i_result;
                                 s_out_result[bitness - 1]                      <= i_result.sign;
                                 s_out_result[bitness - 2: `MANT_SIZE(bitness)] <= i_result.exponent;
                                 s_out_result[`MANT_SIZE(bitness) - 1:0]        <= i_result.significand[`MANT_SIZE(bitness) - 1:0];

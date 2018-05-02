@@ -4,6 +4,8 @@
  * Date: 2018-02-09
  */
 
+`include "fpu.sv"
+
 
 `define TEST_MESSAGE(result, expectation, name) $display("Test \"%s\": %s WITH value %b Needs: %b", name, ((result == expectation)? "OK" : "FAILED"), result, expectation);
 
@@ -16,7 +18,7 @@ module add_tb();
 
         logic [31:0] result;
 
-        logic [3:0] operation;
+        Operation_t operation;
 
         logic input_ack;
         logic output_ack;
@@ -36,7 +38,7 @@ module add_tb();
         initial begin
 
                 // Let's start testing add operation
-                operation = 4'b0000;
+                operation = Operation_t'(4'b0000);
 
                 left = 32'b0_01111111_00000000000000000000000;
                 right= 32'b0_01111000_01000111101011100001010;
@@ -201,7 +203,7 @@ module add_tb();
                 end
 
                 /* Multiply operation test */
-                operation = 4'b0010;
+                operation = Operation_t'(4'b0010);
 
                 left = 32'b0_10000000_00000000000000000000000;
                 right= 32'b0_10000000_00000000000000000000000;
@@ -239,10 +241,10 @@ module add_tb();
                         end
                 end
 
-                operation = 4'b0011;
+                operation = Operation_t'(4'b0011);
 
-                left = 32'b0_10000001_00000000000000000000000;
-                right= 32'b0_10000000_00000000000000000000000;
+                left  = 32'b0_10000001_00000000000000000000000;
+                right = 32'b0_10000000_00000000000000000000000;
                 reset = 1'b1;
                 input_rdy = 1;
                 clock = 1;
