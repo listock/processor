@@ -196,7 +196,7 @@ module add_tb();
                         #1;
                         clock = ~clock;
                         if (output_rdy && input_ack) begin
-                                `TEST_MESSAGE(result, 32'b0_11111111_00000000000000000000000, "Addition Inf + 1 = NaN")
+                                `TEST_MESSAGE(result, 32'b0_11111111_00000000000000000000000, "Addition Inf + 1 = Inf")
                                 #1;
                                 output_ack = 1;
                         end
