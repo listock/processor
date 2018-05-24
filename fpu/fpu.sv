@@ -26,7 +26,10 @@ typedef enum logic[3:0] {
 
 
 module fpu
-        #(parameter bitness=32)
+        #(
+                parameter bitness      = 32
+        ,       parameter data_threads = 1
+        )
 (
         input clock,
         input reset,
@@ -37,11 +40,14 @@ module fpu
         output output_rdy,
         input  output_ack,
 
+        // input [bitness - 1:0][data_threads] data_a,
+        // input [bitness - 1:0][data_threads] data_b,
         input [bitness - 1:0] data_a,
         input [bitness - 1:0] data_b,
 
         input Operation_t operation,
 
+        // output [bitness - 1:0][data_threads] result
         output [bitness - 1:0] result
 );
         enum logic[3:0] {
@@ -66,6 +72,15 @@ module fpu
                 bit [`EXP_SIZE(bitness) - 1:0] exponent;
                 bit [`MANT_SIZE(bitness)   :0] significand;
         } Number_t;
+
+        /** Input unpacking function.
+         * Unpacks data from vector into structured input data storage.
+         */
+        function Number_t get_input_data(input [bitness - 1:0] data);
+                get_input_data.significand = {1'b1, data[`MANT_SIZE(bitness) - 1:0]};
+                get_input_data.exponent    = data[bitness - 2: `MANT_SIZE(bitness)] - `BIAS_COEFF(bitness);
+                get_input_data.sign        = data[bitness - 1];
+        endfunction
 
         logic [bitness - 1:0]
                         s_result
@@ -92,13 +107,8 @@ module fpu
                 case (state)
                         get_input: begin
                                 if (input_rdy) begin
-                                        i_data_a.significand <= {1'b1, data_a[`MANT_SIZE(bitness) - 1:0]};
-                                        i_data_a.exponent    <= data_a[bitness - 2: `MANT_SIZE(bitness)] - `BIAS_COEFF(bitness);
-                                        i_data_a.sign        <= data_a[bitness - 1];
-
-                                        i_data_b.significand <= {1'b1, data_b[`MANT_SIZE(bitness) - 1:0]};
-                                        i_data_b.exponent    <= data_b[bitness - 2: `MANT_SIZE(bitness)] - `BIAS_COEFF(bitness);
-                                        i_data_b.sign        <= data_b[bitness - 1];
+                                        i_data_a = get_input_data(data_a);
+                                        i_data_b = get_input_data(data_b);
 
                                         s_input_ack <= 1;
 
