@@ -1,5 +1,4 @@
-/*
- * Floating point processing unit.
+/** Floating point processing unit.
  *
  * This module can perfomance next tasks with two operands:
  *      - Add
@@ -50,7 +49,7 @@ module fpu
         // output [bitness - 1:0][data_threads] result
         output [bitness - 1:0] result
 );
-        enum logic[3:0] {
+        typedef enum logic[3:0] {
                         unpack        = 4'b0000
                 ,       pack          = 4'b0001
                 ,       align         = 4'b0010
@@ -65,7 +64,9 @@ module fpu
                 ,       special       = 4'b1011
                 ,       op_handling   = 4'b1100
                 ,       bias_out_calc = 4'b1101
-        } state;
+        } Sate_t;
+
+        Sate_t state;
 
         typedef struct packed {
                 bit                            sign;
@@ -75,12 +76,134 @@ module fpu
 
         /** Input unpacking function.
          * Unpacks data from vector into structured input data storage.
+         *
+         * @param data Bit vector containing one number.
+         *
+         * @returns Unpacked into structure number.
          */
         function Number_t get_input_data(input [bitness - 1:0] data);
                 get_input_data.significand = {1'b1, data[`MANT_SIZE(bitness) - 1:0]};
                 get_input_data.exponent    = data[bitness - 2: `MANT_SIZE(bitness)] - `BIAS_COEFF(bitness);
                 get_input_data.sign        = data[bitness - 1];
         endfunction
+
+        /** Adds two numbers.
+         *
+         * @param left Left summand.
+         * @param right Right summand.
+         *
+         * @returns Summ on two numbers.
+         */
+        function Number_t add_numbers(input Number_t left, input Number_t right);
+                add_numbers.exponent = left.exponent;
+                if (left.sign == right.sign) begin
+                        add_numbers.sign        = left.sign;
+                        add_numbers.significand = left.significand[`MANT_SIZE(bitness) - 1:0] + right.significand[`MANT_SIZE(bitness) - 1:0];
+                end
+                else
+                if (left.significand >= right.significand) begin
+                        add_numbers.sign        = left.sign;
+                        add_numbers.significand = left.significand[`MANT_SIZE(bitness) - 1:0] - i_data_b.significand[`MANT_SIZE(bitness) - 1:0];
+                end
+                else
+                if (left.significand < right.significand) begin
+                        add_numbers.sign        = right.sign;
+                        add_numbers.significand = right.significand[`MANT_SIZE(bitness) - 1:0] - left.significand[`MANT_SIZE(bitness) - 1:0];
+                end
+        endfunction
+
+        /** Hadle special input cases: infinity on both arguments, NaN.
+         * If any of them is inf or NaN it stops machine and prepare
+         * result according to IEEE 754.
+         *
+         * @param left Left operand.
+         * @param right Right operand.
+         * @param result Result number.
+         *
+         * @returns Next state of fpu machine.
+         */
+        function automatic Sate_t handle_special_cases(input Number_t left, input Number_t right, ref Number_t result);
+                // Inf A case
+                if (left.exponent == `MAX_EXP_VALUE(bitness) && left.significand[`MANT_SIZE(bitness) - 1:0] == 0) begin
+                        result.sign        = left.sign || right.sign;
+                        result.exponent    = '1;
+                        result.significand = '0;
+                        handle_special_cases = put_result;
+                end
+                else
+                // Inf B case
+                if (right.exponent == `MAX_EXP_VALUE(bitness) && right.significand[`MANT_SIZE(bitness) - 1:0] == 0) begin
+                        result.sign        = left.sign || right.sign;
+                        result.exponent    = '1;
+                        result.significand = '0;
+                        handle_special_cases = put_result;
+                end
+                else
+                // Case if A or B is NaN
+                if ((left.exponent == `MAX_EXP_VALUE(bitness) && left.significand != 0) ||
+                        (right.exponent == `MAX_EXP_VALUE(bitness) && right.significand != 0)) begin
+
+                        result.sign        = left.sign || right.sign;
+                        result.exponent    = '1;
+                        result.significand = '1;
+                        handle_special_cases = put_result;
+                end
+                // Normal calculating cases
+                else begin
+                        handle_special_cases = op_handling;
+                end
+        endfunction
+
+        /** Aligns operands for add.
+         * Shifts right the operand whose exponent smaller.
+         *
+         * @param left Left summand.
+         * @param right Right summand.
+         */
+        function automatic void align_numbers(ref Number_t left, ref Number_t right);
+                logic[`EXP_SIZE(bitness) - 1:0] exp_difference;
+
+                if ($signed(left.exponent) > $signed(right.exponent)) begin
+                        exp_difference = $signed(left.exponent) - $signed(right.exponent);
+
+                        right.exponent    = left.exponent;
+                        right.significand = right.significand >> exp_difference;
+                end
+                else
+                if ($signed(left.exponent) < $signed(right.exponent)) begin
+                        exp_difference = $signed(right.exponent) - $signed(left.exponent);
+
+                        left.exponent    = right.exponent;
+                        left.significand = left.significand >> exp_difference;
+                end
+        endfunction
+
+        /** Multiplies two numbers.
+         *
+         * @param left Left operand.
+         * @oaram right Right operand.
+         *
+         * @returns Result of multiplication.
+         */
+        function Number_t multiply_numbers(input Number_t left, input Number_t right);
+                multiply_numbers.sign = i_data_a.sign || i_data_b.sign;
+                multiply_numbers.exponent = i_data_a.exponent + i_data_b.exponent;
+                multiply_numbers.significand = i_data_a.significand * i_data_b.significand;
+        endfunction
+
+        /** Divides twi numbers.
+         *
+         * @param left Divinded.
+         * @params right Divider.
+         *
+         * @returns The result of division.
+         */
+        function Number_t divide_numbers(input Number_t left, input Number_t right);
+                divide_numbers.sign <= left.sign || right.sign;
+                divide_numbers.exponent <= left.exponent - right.exponent;
+                divide_numbers.significand <= left.significand / right.significand;
+        endfunction
+
 
         logic [bitness - 1:0]
                         s_result
@@ -121,93 +244,35 @@ module fpu
                         special: begin
                                 $display("SPECIAL A: %b %b %b", i_data_a.sign, i_data_a.exponent, i_data_a.significand);
                                 $display("SPECIAL B: %b %b %b", i_data_b.sign, i_data_b.exponent, i_data_b.significand);
-                                // Inf A case
-                                if (i_data_a.exponent == `MAX_EXP_VALUE(bitness) && i_data_a.significand[`MANT_SIZE(bitness) - 1:0] == 0) begin
-                                        i_result.sign        <= i_data_a.sign || i_data_b.sign;
-                                        i_result.exponent    <= '1;
-                                        i_result.significand <= '0;
-                                        state <= put_result;
-                                end
-                                else
-                                // Inf B case
-                                if (i_data_b.exponent == `MAX_EXP_VALUE(bitness) && i_data_b.significand[`MANT_SIZE(bitness) - 1:0] == 0) begin
-                                        i_result.sign        <= i_data_a.sign || i_data_b.sign;
-                                        i_result.exponent    <= '1;
-                                        i_result.significand <= '0;
-                                        state <= put_result;
-                                end
-                                else
-                                // Case if A or B is NaN
-                                if ((i_data_a.exponent == `MAX_EXP_VALUE(bitness) && i_data_a.significand != 0) ||
-                                    (i_data_b.exponent == `MAX_EXP_VALUE(bitness) && i_data_b.significand != 0)) begin
-
-                                        i_result.sign        <= i_data_a.sign || i_data_b.sign;
-                                        i_result.exponent    <= '1;
-                                        i_result.significand <= '1;
-                                        state <= put_result;
-                                end
-                                else begin
-                                    state <= op_handling;
-                                end
+                                state = handle_special_cases(i_data_a, i_data_b, i_result);
                         end
 
                         op_handling: begin
-                                           case (operation)
-                                                add_op: begin
-                                                        state <= align;
-                                                end
-                                                mul_op: begin
-                                                        state <= mul;
-                                                end
-                                                div_op: begin
-                                                        state <= div;
-                                                end
-                                                default: begin
-                                                        state <= put_result;
-                                                end
-                                        endcase
+                                case (operation)
+                                        add_op: begin
+                                                state <= align;
+                                        end
+                                        mul_op: begin
+                                                state <= mul;
+                                        end
+                                        div_op: begin
+                                                state <= div;
+                                        end
+                                        default: begin
+                                                state <= put_result;
+                                        end
+                                endcase
                         end
 
                         /* Input numbers aligning
                          */
                         align: begin
-                                if ($signed(i_data_a.exponent) > $signed(i_data_b.exponent)) begin
-                                        $display("A > B!");
-                                        exp_difference = $signed(i_data_a.exponent) - $signed(i_data_b.exponent);
-
-                                        i_data_b.exponent    = i_data_a.exponent;
-                                        i_data_b.significand = i_data_b.significand >> exp_difference;
-                                end
-                                else
-                                if ($signed(i_data_a.exponent) < $signed(i_data_b.exponent)) begin
-                                        $display("A < B!");
-                                        exp_difference = $signed(i_data_b.exponent) - $signed(i_data_a.exponent);
-
-                                        i_data_a.exponent    = i_data_b.exponent;
-                                        i_data_a.significand = i_data_a.significand >> exp_difference;
-                                end
+                                align_numbers(i_data_a, i_data_b);
                                 state <= add_0;
                         end
 
                         add_0: begin
-                                $display("A: %b %b %b", i_data_a.sign, i_data_a.exponent, i_data_a.significand);
-                                $display("B: %b %b %b", i_data_b.sign, i_data_b.exponent, i_data_b.significand);
-
-                                i_result.exponent <= i_data_a.exponent;
-                                if (i_data_a.sign == i_data_b.sign) begin
-                                        i_result.sign        <= i_data_a.sign;
-                                        i_result.significand <= i_data_a.significand[`MANT_SIZE(bitness) - 1:0] + i_data_b.significand[`MANT_SIZE(bitness) - 1:0];
-                                end
-                                else
-                                if (i_data_a.significand >= i_data_b.significand) begin
-                                        i_result.sign        <= i_data_a.sign;
-                                        i_result.significand <= i_data_a.significand[`MANT_SIZE(bitness) - 1:0] - i_data_b.significand[`MANT_SIZE(bitness) - 1:0];
-                                end
-                                else
-                                if (i_data_a.significand < i_data_b.significand) begin
-                                        i_result.sign        <= i_data_b.sign;
-                                        i_result.significand <= i_data_b.significand[`MANT_SIZE(bitness) - 1:0] - i_data_a.significand[`MANT_SIZE(bitness) - 1:0];
-                                end
+                                i_result = add_numbers(i_data_a, i_data_b);
                                 state <= add_1;
                         end
 
@@ -220,18 +285,12 @@ module fpu
                         end
 
                         mul: begin
-                                i_result.sign <= i_data_a.sign || i_data_b.sign;
-                                i_result.exponent <= i_data_a.exponent + i_data_b.exponent;
-                                i_result.significand <= i_data_a.significand * i_data_b.significand;
-
+                                i_result = multiply_numbers(i_data_a, i_data_b);
                                 state <= bias_out_calc;
                         end
 
                         div: begin
-                                i_result.sign <= i_data_a.sign || i_data_b.sign;
-                                i_result.exponent <= i_data_a.exponent - i_data_b.exponent;
-                                i_result.significand <= i_data_a.significand / i_data_b.significand;
-
+                                i_result = divide_numbers(i_data_a, i_data_b);
                                 state <= bias_out_calc;
                         end
 
@@ -240,7 +299,6 @@ module fpu
 
                         bias_out_calc: begin
                                 i_result.exponent <= i_result.exponent + `BIAS_COEFF(bitness);
-
                                 state <= put_result;
                         end
 
