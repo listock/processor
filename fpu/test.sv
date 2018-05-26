@@ -16,6 +16,8 @@ module add_tb();
 
         logic [31:0] left, right;
 
+        logic [1:0][31 - 1:0] data_a_list, data_b_list, result_list;
+
         logic [31:0] result;
 
         Operation_t operation;
@@ -33,7 +35,11 @@ module add_tb();
                 .output_ack(output_ack),
                 .input_rdy(input_rdy),
                 .input_ack(input_ack),
-                .result(result));
+                .result(result),
+                .data_a_list(data_a_list),
+                .data_b_list(data_b_list),
+                .result_list(result_list)
+                );
 
         initial begin
 

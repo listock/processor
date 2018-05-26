@@ -39,15 +39,21 @@ module fpu
         output output_rdy,
         input  output_ack,
 
-        // input [bitness - 1:0][data_threads] data_a,
-        // input [bitness - 1:0][data_threads] data_b,
+        // New
+        input [data_threads:0][bitness - 1:0] data_a_list,
+        input [data_threads:0][bitness - 1:0] data_b_list,
+
+        // Old
         input [bitness - 1:0] data_a,
         input [bitness - 1:0] data_b,
 
         input Operation_t operation,
 
-        // output [bitness - 1:0][data_threads] result
-        output [bitness - 1:0] result
+        // Old
+        output [bitness - 1:0] result,
+
+        // New
+        output [data_threads:0][bitness - 1:0] result_list
 );
         typedef enum logic[3:0] {
                         unpack        = 4'b0000
@@ -112,7 +118,7 @@ module fpu
                 end
         endfunction
 
-        /** Hadle special input cases: infinity on both arguments, NaN.
+        /** Handle special input cases: infinity on both arguments, NaN.
          * If any of them is inf or NaN it stops machine and prepare
          * result according to IEEE 754.
          *
@@ -217,6 +223,12 @@ module fpu
                         i_data_a
                 ,       i_data_b
                 ,       i_result;
+        
+        Number_t[data_threads:0]
+                        i_data_a_list
+                ,       i_data_b_list
+                ,       i_result_list;
+
 
         logic[`EXP_SIZE(bitness) - 1:0] exp_difference;
 
@@ -227,11 +239,21 @@ module fpu
                         s_input_ack  <= 0;
                 end
 
+                // State machine
                 case (state)
+                        // Recive input data
                         get_input: begin
                                 if (input_rdy) begin
                                         i_data_a = get_input_data(data_a);
                                         i_data_b = get_input_data(data_b);
+
+                                        foreach(data_a_list[i]) begin
+                                                i_data_a_list[i] = get_input_data(data_a_list[i]);
+                                        end
+
+                                        foreach(data_b_list[i]) begin
+                                                i_data_b_list[i] = get_input_data(data_b_list[i]);
+                                        end
 
                                         s_input_ack <= 1;
 
@@ -239,14 +261,14 @@ module fpu
                                 end
                         end
 
-                        /* Special cases
-                         */
+                        // Special cases
                         special: begin
                                 $display("SPECIAL A: %b %b %b", i_data_a.sign, i_data_a.exponent, i_data_a.significand);
                                 $display("SPECIAL B: %b %b %b", i_data_b.sign, i_data_b.exponent, i_data_b.significand);
                                 state = handle_special_cases(i_data_a, i_data_b, i_result);
                         end
 
+                        // Choose start state of operation
                         op_handling: begin
                                 case (operation)
                                         add_op: begin
@@ -264,18 +286,19 @@ module fpu
                                 endcase
                         end
 
-                        /* Input numbers aligning
-                         */
+                        // Input data aligning
                         align: begin
                                 align_numbers(i_data_a, i_data_b);
                                 state <= add_0;
                         end
 
+                        // Operands add
                         add_0: begin
                                 i_result = add_numbers(i_data_a, i_data_b);
                                 state <= add_1;
                         end
 
+                        // After add postprocess
                         add_1: begin
                                 if (i_result.significand[`MANT_SIZE(bitness)]) begin
                                         i_result.exponent    <= i_result.exponent + 1;
@@ -284,24 +307,29 @@ module fpu
                                 state <= bias_out_calc;
                         end
 
+                        // Multiply
                         mul: begin
                                 i_result = multiply_numbers(i_data_a, i_data_b);
                                 state <= bias_out_calc;
                         end
 
+                        // Divide
                         div: begin
                                 i_result = divide_numbers(i_data_a, i_data_b);
                                 state <= bias_out_calc;
                         end
 
+                        // Normalize
                         normalize: begin
                         end
 
+                        // Bias calculating for result
                         bias_out_calc: begin
                                 i_result.exponent <= i_result.exponent + `BIAS_COEFF(bitness);
                                 state <= put_result;
                         end
 
+                        // Put result data to output
                         put_result: begin
                                 // Пакуется криво, добавляется на кой-то хер с
                                 // крытый бит
