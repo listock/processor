@@ -16,7 +16,7 @@ module add_tb();
 
         logic [31:0] left, right;
 
-        logic [1:0][31 - 1:0] data_a_list, data_b_list, result_list;
+        logic [1:0][31:0] data_a_list, data_b_list, result_list;
 
         logic [31:0] result;
 
